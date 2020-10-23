@@ -4,6 +4,8 @@ Checks for available Plex Media Server updates on Synology NAS, automatically do
 
 Can be set up as a scheduled task in DSM to run regularly. Can write log messages to Log Center.
 
+![image](https://user-images.githubusercontent.com/2750531/97003805-ae3b1880-1544-11eb-8ec4-2fde4d9be317.png)
+
 ## Setup
 
 ### Prerequisites
@@ -29,3 +31,4 @@ In `Control Panel` > `Task Scheduler`, click `Create` > `Scheduled Task` > `User
 ```
 bash /volume1/Scripts/syno-plex-update.sh
 ```
+![image](https://user-images.githubusercontent.com/2750531/97003865-ce6ad780-1544-11eb-9fa0-b2b42169ff18.png)
