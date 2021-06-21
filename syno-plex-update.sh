@@ -67,7 +67,9 @@ function get_plex_token {
 
 function get_installed_version {
     # Retrieve the version currently installed on NAS.
-    synopkg version "${PACKAGE_NAME}"
+    local installed_version=$(synopkg version "${PACKAGE_NAME}")
+    # Truncate everything after the dash so that we get a version in A.B.C.D format.
+    echo ${installed_version%-*}
 }
 
 function download_release_metadata {
@@ -90,7 +92,8 @@ function parse_latest_version {
     local release_meta=$1
     local query='.nas.Synology.version'
     local latest_version=$(echo "${release_meta}" | jq -r "${query}")
-    echo ${latest_version}
+    # Truncate everything after the dash so that we get a version in A.B.C.D format.
+    echo ${latest_version%-*}
 }
 
 function parse_download_url {
