@@ -11,7 +11,9 @@
 # ========== [Begin Configuration] ==========
 
 # Path to the local Plex server preferences file (in NAS filesystem).
-PLEX_PREFERENCES_FILE='/volume1/Plex/Library/Application Support/Plex Media Server/Preferences.xml'
+# Can be found fia `sudo find / -name "Preferences.xml" | grep Plex`
+# Extracting and passing the online token seems optional though, so you can omit this.
+PLEX_PREFERENCES_FILE='/volume1/@apphome/PlexMediaServer/Plex Media Server/Preferences.xml'
 
 # Web endpoint for retrieving Plex release metadata.
 PLEX_RELEASE_API='https://plex.tv/api/downloads/5.json?X-Plex-Token=TokenPlaceholder'
@@ -27,8 +29,14 @@ ENABLE_LOG_CENTER_LOGGING=true
 
 # ========== [End Configuration] ==========
 
-PACKAGE_NAME='Plex Media Server'
+DSM_VERSION=$(cat /etc/VERSION | grep majorversion | tail -c 3 | head -c 1)
 OS_ARCHITECTURE="linux-$(uname -m)"
+
+if [ "${DSM_VERSION}" -ge "7" ]; then
+    PACKAGE_NAME='PlexMediaServer'
+else
+    PACKAGE_NAME='Plex Media Server'
+fi
 
 set -eu
 
@@ -90,7 +98,11 @@ function download_release_metadata {
 function parse_latest_version {
     # Given a Plex release JSON, extract the latest Synology build version.
     local release_meta=$1
-    local query='.nas.Synology.version'
+    if [ "${DSM_VERSION}" -ge "7" ]; then
+        local query='.nas."Synology (DSM 7)".version'
+    else
+        local query='.nas.Synology.version'
+    fi
     local latest_version=$(echo "${release_meta}" | jq -r "${query}")
     # Truncate everything after the dash so that we get a version in A.B.C.D format.
     echo ${latest_version%-*}
@@ -99,7 +111,11 @@ function parse_latest_version {
 function parse_download_url {
     # Given a Plex release JSON, extract the latest Synology build download URL.
     local release_meta=$1
-    local query=".nas.Synology.releases[] | select(.build==\"${OS_ARCHITECTURE}\") | .url"
+    if [ "${DSM_VERSION}" -ge "7" ]; then
+        local query=".nas.\"Synology (DSM 7)\".releases[] | select(.build==\"${OS_ARCHITECTURE}\") | .url"
+    else
+        local query=".nas.Synology.releases[] | select(.build==\"${OS_ARCHITECTURE}\") | .url"
+    fi
     local download_url=$(echo "${release_meta}" | jq -r "${query}")
     echo ${download_url}
 }
