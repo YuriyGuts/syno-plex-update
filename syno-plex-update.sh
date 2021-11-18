@@ -23,10 +23,7 @@ else
 fi
 
 # Web endpoint for retrieving Plex release metadata.
-PLEX_RELEASE_API='https://plex.tv/api/downloads/5.json?X-Plex-Token=TokenPlaceholder'
-
-# Web endpoint for retrieving Plex (Pass) release metadata.
-#PLEX_RELEASE_API='https://plex.tv/api/downloads/5.json?channel=plexpass&X-Plex-Token=TokenPlaceholder'
+PLEX_RELEASE_API='https://plex.tv/api/downloads/5.json?channel=plexpass&X-Plex-Token=TokenPlaceholder'
 
 # Temporary directory for downloading .spk packages. Contents will be destroyed.
 DOWNLOAD_DIR='/tmp/syno-plex-update'
