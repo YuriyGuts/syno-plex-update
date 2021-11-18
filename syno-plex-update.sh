@@ -10,13 +10,23 @@
 
 # ========== [Begin Configuration] ==========
 
+DSM_VERSION=$(cat /etc/VERSION | grep majorversion | tail -c 3 | head -c 1)
+OS_ARCHITECTURE="linux-$(uname -m)"
+
 # Path to the local Plex server preferences file (in NAS filesystem).
 # Can be found fia `sudo find / -name "Preferences.xml" | grep Plex`
 # Extracting and passing the online token seems optional though, so you can omit this.
-PLEX_PREFERENCES_FILE='/volume1/@apphome/PlexMediaServer/Plex Media Server/Preferences.xml'
+if [ "${DSM_VERSION}" -ge "7" ]; then
+    PLEX_PREFERENCES_FILE='/var/packages/PlexMediaServer/shares/PlexMediaServer/AppData/Plex Media Server/Preferences.xml'
+else
+    PLEX_PREFERENCES_FILE='/volume1/@apphome/PlexMediaServer/Plex Media Server/Preferences.xml'
+fi
 
 # Web endpoint for retrieving Plex release metadata.
 PLEX_RELEASE_API='https://plex.tv/api/downloads/5.json?X-Plex-Token=TokenPlaceholder'
+
+# Web endpoint for retrieving Plex (Pass) release metadata.
+#PLEX_RELEASE_API='https://plex.tv/api/downloads/5.json?channel=plexpass&X-Plex-Token=TokenPlaceholder'
 
 # Temporary directory for downloading .spk packages. Contents will be destroyed.
 DOWNLOAD_DIR='/tmp/syno-plex-update'
@@ -28,9 +38,6 @@ ENABLE_SYSLOG_LOGGING=true
 ENABLE_LOG_CENTER_LOGGING=true
 
 # ========== [End Configuration] ==========
-
-DSM_VERSION=$(cat /etc/VERSION | grep majorversion | tail -c 3 | head -c 1)
-OS_ARCHITECTURE="linux-$(uname -m)"
 
 if [ "${DSM_VERSION}" -ge "7" ]; then
     PACKAGE_NAME='PlexMediaServer'
@@ -156,12 +163,16 @@ function main {
     write_log "Installed version: ${installed_version}"
     write_log "Latest available version: ${latest_version}"
 
-    if [ ! -z "${latest_version}" ] && [ "${latest_version}" != "${installed_version}" ]; then
+    set +eu
+	/usr/bin/dpkg --compare-versions "$latest_version" gt "$installed_version"
+    if [ "$?" -eq "0" ]; then
+        set -eu
         write_log 'Update available. Trying to download and install'
         notify_update_available
         download_url=$(parse_download_url "${release_meta}")
         download_and_install_package "${download_url}"
     else
+        set -eu
         write_log 'No updates available'
     fi
 }
