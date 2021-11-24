@@ -23,7 +23,8 @@ else
 fi
 
 # Web endpoint for retrieving Plex release metadata.
-PLEX_RELEASE_API='https://plex.tv/api/downloads/5.json?channel=plexpass&X-Plex-Token=TokenPlaceholder'
+#PLEX_RELEASE_API='https://plex.tv/api/downloads/5.json?channel=plexpass&X-Plex-Token=TokenPlaceholder'
+PLEX_RELEASE_API='https://plex.tv/api/downloads/5.json?X-Plex-Token=TokenPlaceholder'
 
 # Temporary directory for downloading .spk packages. Contents will be destroyed.
 DOWNLOAD_DIR='/tmp/syno-plex-update'
@@ -150,6 +151,20 @@ function download_and_install_package {
     rm -rf "${downloaded_package_file}"
 }
 
+function is_latest_version_installed {
+    # Check that the installed version is at least as high as the available version.
+    local available_version=$1
+    local installed_version=$2
+
+    # dpkg version comparison uses exit codes so we'll tolerate errors temporarily.
+    set +eu
+    /usr/bin/dpkg --compare-versions "$available_version" gt "$installed_version"
+    local result="$?"
+    set -eu
+
+    echo ${result}
+}
+
 function main {
     write_log "${PACKAGE_NAME} auto-update started"
 
@@ -160,16 +175,13 @@ function main {
     write_log "Installed version: ${installed_version}"
     write_log "Latest available version: ${latest_version}"
 
-    set +eu
-	/usr/bin/dpkg --compare-versions "$latest_version" gt "$installed_version"
-    if [ "$?" -eq "0" ]; then
-        set -eu
+    is_latest=$(is_latest_version_installed "$latest_version" "$installed_version")
+    if [ "$is_latest" -eq "0" ]; then
         write_log 'Update available. Trying to download and install'
         notify_update_available
         download_url=$(parse_download_url "${release_meta}")
         download_and_install_package "${download_url}"
     else
-        set -eu
         write_log 'No updates available'
     fi
 }
