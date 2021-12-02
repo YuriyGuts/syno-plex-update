@@ -23,7 +23,6 @@ else
 fi
 
 # Web endpoint for retrieving Plex release metadata.
-#PLEX_RELEASE_API='https://plex.tv/api/downloads/5.json?channel=plexpass&X-Plex-Token=TokenPlaceholder'
 PLEX_RELEASE_API='https://plex.tv/api/downloads/5.json?X-Plex-Token=TokenPlaceholder'
 
 # Temporary directory for downloading .spk packages. Contents will be destroyed.
@@ -73,6 +72,11 @@ function exit_trap {
     fi
 }
 
+function is_public_channel {
+    # Extract Plex server token from local preferences file.
+    cat "${PLEX_PREFERENCES_FILE}" | grep -oP 'ButlerUpdateChannel="\K[^"]+'
+}
+
 function get_plex_token {
     # Extract Plex server token from local preferences file.
     cat "${PLEX_PREFERENCES_FILE}" | grep -oP 'PlexOnlineToken="\K[^"]+'
@@ -89,6 +93,14 @@ function download_release_metadata {
     # Grab release information from Plex API (as JSON).
     local release_url=${PLEX_RELEASE_API/TokenPlaceholder/$(get_plex_token)}
     local response
+    
+    is_public_channel=$(is_public_channel)
+    if [ "$is_public_channel" -eq "0" ]; then
+        write_log 'Public channel'
+    else
+        write_log 'Beta channel'
+        release_url="${release_url}&channel=plexpass"
+    fi
 
     write_log "Downloading Plex release metadata from '${release_url}'"
     response=$(curl --fail --silent "${release_url}")
