@@ -73,7 +73,7 @@ function exit_trap {
 }
 
 function is_public_channel {
-    # Extract Plex server token from local preferences file.
+    # Extract Plex server update channel value from local preferences file.
     cat "${PLEX_PREFERENCES_FILE}" | grep -oP 'ButlerUpdateChannel="\K[^"]+'
 }
 
