@@ -14,7 +14,7 @@ Tested on DSM 6 and DSM 7.
 
 Follow the instructions from [Plex Support](https://support.plex.tv/articles/205165858-how-to-add-plex-s-package-signing-public-key-to-synology-nas-package-center/) to set the package trust level on your NAS and import the package signing key from Plex Inc.
 
-**Important**: do not skip this step otherwise automatic package installation will be forbidden by DSM.
+**Important**: do not skip this step otherwise automatic package installation will be forbidden by DSM 6. As of DSM 7, this setting does not appear to be necessary and available anymore.
 
 ### Installation
 
