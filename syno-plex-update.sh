@@ -46,7 +46,7 @@ else
 fi
 
 function write_log {
-    local full_message="[syno-plex-update] $@"
+    local full_message="[syno-plex-update] $*"
 
     if [ "${ENABLE_SYSLOG_LOGGING}" = true ]; then
         # Write to rsyslog and mirror to stderr.
@@ -73,57 +73,67 @@ function exit_trap {
     fi
 }
 
-function is_public_channel {
+function warn_if_preferences_not_found {
+    if [ ! -f "${PLEX_PREFERENCES_FILE}" ]; then
+        write_log "Warning: preferences file not found at the expected path: '${PLEX_PREFERENCES_FILE}'. Please edit the script manually"
+    fi
+}
+
+function get_update_channel {
     # Extract Plex server update channel value from local preferences file.
-    cat "${PLEX_PREFERENCES_FILE}" | grep -oP 'ButlerUpdateChannel="\K[^"]+' || echo "0"
+    grep -oPs 'ButlerUpdateChannel="\K[^"]+' "${PLEX_PREFERENCES_FILE}" || echo "Public"
 }
 
 function get_plex_token {
     # Extract Plex server token from local preferences file.
-    cat "${PLEX_PREFERENCES_FILE}" | grep -oP 'PlexOnlineToken="\K[^"]+'
+    grep -oPs 'PlexOnlineToken="\K[^"]+' "${PLEX_PREFERENCES_FILE}" || echo ""
 }
 
 function get_installed_version {
     # Retrieve the version currently installed on NAS.
-    local installed_version=$(synopkg version "${PACKAGE_NAME}")
+    local installed_version
+    installed_version=$(synopkg version "${PACKAGE_NAME}")
     # Truncate everything after the dash so that we get a version in A.B.C.D format.
-    echo ${installed_version%-*}
+    echo "${installed_version%-*}"
 }
 
 function download_release_metadata {
     # Grab release information from Plex API (as JSON).
     local release_url=${PLEX_RELEASE_API/TokenPlaceholder/$(get_plex_token)}
-    local response
-    
-    is_public_channel=$(is_public_channel)
-    if [ "$is_public_channel" -eq "0" ]; then
-        write_log 'Public channel'
-    else
-        write_log 'Beta channel'
+
+    local update_channel_name
+    update_channel_name=$(get_update_channel)
+    write_log "Using update channel: ${update_channel_name}"
+    if [ "${update_channel_name}" != "Public" ]; then
         release_url="${release_url}&channel=plexpass"
     fi
 
     write_log "Downloading Plex release metadata from '${release_url}'"
+    local response
     response=$(curl --fail --silent "${release_url}")
     local curl_exit_code="$?"
     if [[ ${curl_exit_code} != 0 ]]; then
         write_log "Error: Web request returned a non-zero exit code (${curl_exit_code})"
         return ${curl_exit_code}
     fi
-    echo ${response}
+    echo "${response}"
 }
 
 function parse_latest_version {
     # Given a Plex release JSON, extract the latest Synology build version.
     local release_meta=$1
+    local query
+
     if [ "${DSM_VERSION}" -ge "7" ]; then
-        local query='.nas."Synology (DSM 7)".version'
+        query='.nas."Synology (DSM 7)".version'
     else
-        local query='.nas.Synology.version'
+        query='.nas.Synology.version'
     fi
-    local latest_version=$(echo "${release_meta}" | jq -r "${query}")
+
+    local latest_version
+    latest_version=$(echo "${release_meta}" | jq -r "${query}")
     # Truncate everything after the dash so that we get a version in A.B.C.D format.
-    echo ${latest_version%-*}
+    echo "${latest_version%-*}"
 }
 
 function parse_download_url {
@@ -134,8 +144,9 @@ function parse_download_url {
     else
         local query=".nas.Synology.releases[] | select(.build==\"${OS_ARCHITECTURE}\") | .url"
     fi
-    local download_url=$(echo "${release_meta}" | jq -r "${query}")
-    echo ${download_url}
+    local download_url
+    download_url=$(echo "${release_meta}" | jq -r "${query}")
+    echo "${download_url}"
 }
 
 function notify_update_available {
@@ -150,11 +161,11 @@ function download_and_install_package {
     write_log "Downloading latest version from ${url}"
     rm -rf "${DOWNLOAD_DIR}"
     mkdir -p "${DOWNLOAD_DIR}" > /dev/null 2>&1
-    wget ${url} -P "${DOWNLOAD_DIR}/"
+    wget "${url}" -P "${DOWNLOAD_DIR}/"
 
     local downloaded_package_file="${DOWNLOAD_DIR}/*.spk"
     write_log "Installing SPK package from ${downloaded_package_file}"
-    synopkg install ${downloaded_package_file}
+    synopkg install "${downloaded_package_file}"
     sleep 30
 
     write_log "Starting the new ${PACKAGE_NAME} package"
@@ -180,6 +191,7 @@ function is_latest_version_installed {
 
 function main {
     write_log "${PACKAGE_NAME} auto-update started"
+    warn_if_preferences_not_found
 
     installed_version=$(get_installed_version)
     release_meta=$(download_release_metadata)
