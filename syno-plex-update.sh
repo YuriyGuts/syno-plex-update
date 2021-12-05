@@ -10,18 +10,6 @@
 
 # ========== [Begin Configuration] ==========
 
-DSM_VERSION=$(cat /etc/VERSION | grep majorversion | tail -c 3 | head -c 1)
-OS_ARCHITECTURE="linux-$(uname -m)"
-
-# Path to the local Plex server preferences file (in NAS filesystem).
-# Can be found fia `sudo find / -name "Preferences.xml" | grep Plex`
-# Extracting and passing the online token seems optional though, so you can omit this.
-if [ "${DSM_VERSION}" -ge "7" ]; then
-    PLEX_PREFERENCES_FILE='/var/packages/PlexMediaServer/shares/PlexMediaServer/AppData/Plex Media Server/Preferences.xml'
-else
-    PLEX_PREFERENCES_FILE='/volume1/@apphome/PlexMediaServer/Plex Media Server/Preferences.xml'
-fi
-
 # Web endpoint for retrieving Plex release metadata.
 PLEX_RELEASE_API='https://plex.tv/api/downloads/5.json?X-Plex-Token=TokenPlaceholder'
 
@@ -36,13 +24,26 @@ ENABLE_LOG_CENTER_LOGGING=true
 
 # ========== [End Configuration] ==========
 
+set -eu
+
+DSM_VERSION=$(grep -oP 'majorversion="\K[^"]+' /etc/VERSION)
+OS_ARCHITECTURE="linux-$(uname -m)"
+
 if [ "${DSM_VERSION}" -ge "7" ]; then
     PACKAGE_NAME='PlexMediaServer'
 else
     PACKAGE_NAME='Plex Media Server'
 fi
 
-set -eu
+# Path to the local Plex server preferences file (in NAS filesystem).
+# https://support.plex.tv/articles/202915258-where-is-the-plex-media-server-data-directory-located/
+# Can also be found fia `sudo find / -name "Preferences.xml" | grep Plex`
+# Extracting and passing the online token seems optional though, so you can omit this.
+if [ "${DSM_VERSION}" -ge "7" ]; then
+    PLEX_PREFERENCES_FILE='/volume1/PlexMediaServer/AppData/Plex Media Server/Preferences.xml'
+else
+    PLEX_PREFERENCES_FILE='/volume1/Plex/Library/Application Support/Plex Media Server/Preferences.xml'
+fi
 
 function write_log {
     local full_message="[syno-plex-update] $@"
