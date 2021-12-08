@@ -163,7 +163,9 @@ function download_and_install_package {
     mkdir -p "${DOWNLOAD_DIR}" > /dev/null 2>&1
     wget "${url}" -P "${DOWNLOAD_DIR}/"
 
-    local downloaded_package_file="${DOWNLOAD_DIR}/*.spk"
+    local downloaded_package_file
+    downloaded_package_file=$(find "${DOWNLOAD_DIR}" -type f -name "*.spk" | head -n 1)
+
     write_log "Installing SPK package from ${downloaded_package_file}"
     synopkg install "${downloaded_package_file}"
     sleep 30
@@ -171,8 +173,8 @@ function download_and_install_package {
     write_log "Starting the new ${PACKAGE_NAME} package"
     synopkg start "${PACKAGE_NAME}"
 
-    write_log "Cleaning up ${downloaded_package_file}"
-    rm -rf "${downloaded_package_file}"
+    write_log "Cleaning up ${DOWNLOAD_DIR}"
+    rm -rf "${DOWNLOAD_DIR}"
 }
 
 function is_latest_version_installed {
