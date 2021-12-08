@@ -108,7 +108,11 @@ function download_release_metadata {
         release_url="${release_url}&channel=plexpass"
     fi
 
-    write_log "Downloading Plex release metadata from '${release_url}'"
+    # Do not write tokens to logs
+    local release_url_with_masked_secrets
+    release_url_with_masked_secrets=$(echo "${release_url}" | sed -e 's/Token=[A-Za-z0-9]\+/Token=<hidden>/g')
+    write_log "Downloading Plex release metadata from '${release_url_with_masked_secrets}'"
+
     local response
     response=$(curl --fail --silent "${release_url}")
     local curl_exit_code="$?"
