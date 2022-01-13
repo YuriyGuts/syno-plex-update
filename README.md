@@ -6,7 +6,7 @@ Can be set up as a scheduled task in DSM to run regularly. Can write log message
 
 Tested on DSM 6 and DSM 7.
 
-![image](https://user-images.githubusercontent.com/2750531/97003805-ae3b1880-1544-11eb-8ec4-2fde4d9be317.png)
+![image](https://user-images.githubusercontent.com/2750531/149373978-6e88c098-30f2-4c28-860e-5eb459faf369.png)
 
 ## Setup
 
