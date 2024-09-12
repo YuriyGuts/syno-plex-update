@@ -26,10 +26,11 @@ ENABLE_LOG_CENTER_LOGGING=true
 
 set -eu
 
-DSM_VERSION=$(grep -oP 'majorversion="\K[^"]+' /etc/VERSION)
+DSM_MAJOR_VERSION=$(grep -oP 'majorversion="\K[^"]+' /etc/VERSION)
+DSM_PRODUCT_VERSION=$(grep -oP 'productversion="\K[^"]+' /etc/VERSION)
 OS_ARCHITECTURE="linux-$(uname -m)"
 
-if [ "${DSM_VERSION}" -ge "7" ]; then
+if [ "${DSM_MAJOR_VERSION}" -ge "7" ]; then
     PACKAGE_NAME='PlexMediaServer'
 else
     PACKAGE_NAME='Plex Media Server'
@@ -39,7 +40,7 @@ fi
 # https://support.plex.tv/articles/202915258-where-is-the-plex-media-server-data-directory-located/
 # Can also be found fia `sudo find / -name "Preferences.xml" | grep Plex`
 # Extracting and passing the online token seems optional though, so you can omit this.
-if [ "${DSM_VERSION}" -ge "7" ]; then
+if [ "${DSM_MAJOR_VERSION}" -ge "7" ]; then
     PLEX_PREFERENCES_FILE='/volume1/PlexMediaServer/AppData/Plex Media Server/Preferences.xml'
 else
     PLEX_PREFERENCES_FILE='/volume1/Plex/Library/Application Support/Plex Media Server/Preferences.xml'
@@ -97,6 +98,24 @@ function get_installed_version {
     echo "${installed_version%-*}"
 }
 
+function get_nas_release_name {
+    # Determine the name of the NAS build in the Plex metadata to use for the update.
+    local release_name
+
+    # DSM 6, DSM 7, and DSM 7.2.2+ versions are incompatible; pick the right one.
+    if /usr/bin/dpkg --compare-versions "${DSM_PRODUCT_VERSION}" lt 7.0; then
+        release_name="Synology (DSM 6)"
+    elif /usr/bin/dpkg --compare-versions "${DSM_PRODUCT_VERSION}" ge 7.0 && /usr/bin/dpkg --compare-versions "${DSM_PRODUCT_VERSION}" lt 7.2.2; then
+        release_name="Synology (DSM 7)"
+    elif /usr/bin/dpkg --compare-versions "${DSM_PRODUCT_VERSION}" ge 7.2.2; then
+        release_name="Synology (DSM 7.2.2+)"
+    else
+        release_name="Synology"
+    fi
+
+    echo "${release_name}"
+}
+
 function download_release_metadata {
     # Grab release information from Plex API (as JSON).
     local release_url=${PLEX_RELEASE_API/TokenPlaceholder/$(get_plex_token)}
@@ -128,11 +147,9 @@ function parse_latest_version {
     local release_meta=$1
     local query
 
-    if [ "${DSM_VERSION}" -ge "7" ]; then
-        query='.nas."Synology (DSM 7)".version'
-    else
-        query='.nas.Synology.version'
-    fi
+    local release_name
+    release_name=$(get_nas_release_name)
+    local query=".nas.\"${release_name}\".version"
 
     local latest_version
     latest_version=$(echo "${release_meta}" | jq -r "${query}")
@@ -143,11 +160,11 @@ function parse_latest_version {
 function parse_download_url {
     # Given a Plex release JSON, extract the latest Synology build download URL.
     local release_meta=$1
-    if [ "${DSM_VERSION}" -ge "7" ]; then
-        local query=".nas.\"Synology (DSM 7)\".releases[] | select(.build==\"${OS_ARCHITECTURE}\") | .url"
-    else
-        local query=".nas.Synology.releases[] | select(.build==\"${OS_ARCHITECTURE}\") | .url"
-    fi
+
+    local release_name
+    release_name=$(get_nas_release_name)
+    local query=".nas.\"${release_name}\".releases[] | select(.build==\"${OS_ARCHITECTURE}\") | .url"
+
     local download_url
     download_url=$(echo "${release_meta}" | jq -r "${query}")
     echo "${download_url}"
@@ -188,7 +205,7 @@ function is_latest_version_installed {
 
     # dpkg version comparison uses exit codes so we'll tolerate errors temporarily.
     set +eu
-    /usr/bin/dpkg --compare-versions "$available_version" gt "$installed_version"
+    /usr/bin/dpkg --compare-versions "${available_version}" gt "${installed_version}"
     local result="$?"
     set -eu
 
