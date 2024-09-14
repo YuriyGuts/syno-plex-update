@@ -24,12 +24,12 @@ No prerequisites required, just follow the installation instructions below.
 
 ### Installation
 
-Enter a root shell on your NAS (log in via SSH, then `sudo -i`) and run:
+Enter a root shell on your NAS (log in via SSH, then run `sudo -i` to switch to root) and run:
 ```
-# mkdir -p /volume1/Scripts
-# cd /volume1/Scripts
-# wget -O syno-plex-update.sh https://raw.githubusercontent.com/YuriyGuts/syno-plex-update/master/syno-plex-update.sh
-# chmod +x syno-plex-update.sh
+mkdir -p /volume1/Scripts
+cd /volume1/Scripts
+wget -O syno-plex-update.sh https://raw.githubusercontent.com/YuriyGuts/syno-plex-update/master/syno-plex-update.sh
+chmod +x syno-plex-update.sh
 ```
 
 ### Scheduled Task Setup
